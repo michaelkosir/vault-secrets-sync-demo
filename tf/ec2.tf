@@ -1,6 +1,7 @@
 # Search for latest AL2023 AMI
 data "aws_ami" "al2023" {
   most_recent = true
+  owners      = ["amazon"]
 
   filter {
     name   = "name"
@@ -11,8 +12,6 @@ data "aws_ami" "al2023" {
     name   = "virtualization-type"
     values = ["hvm"]
   }
-
-  owners = ["amazon"]
 }
 
 # Create EC2
