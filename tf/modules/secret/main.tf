@@ -1,3 +1,7 @@
+variable "team" {
+  type = string
+}
+
 resource "random_uuid" "this" {}
 
 resource "random_pet" "this" {}
