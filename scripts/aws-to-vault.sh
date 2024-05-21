@@ -20,7 +20,7 @@ while : ; do
     for Path in $Paths; do
         echo "Adding secret: $Path"
         Resp=$(aws secretsmanager get-secret-value --region $AWSRegion --query 'SecretString' --output json --secret-id $Path | jq -r)
-        vault kv put $VaultMount/$Path $(echo $Resp | jq -r 'to_entries[] | .key + "=" + .value')
+        vault kv put $VaultMount/$Path $(jq -r 'to_entries | map("\(.key)=\(.value)") | join(" ")' <<< $Resp)
     done
 
     if [[ $NextToken == "null" ]]; then
