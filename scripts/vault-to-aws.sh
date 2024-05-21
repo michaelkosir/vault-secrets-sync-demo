@@ -25,10 +25,8 @@ iterate() {
         if [[ $Item != */ ]]; then
             echo -n "Syncing secret: $FullPath"
             SecretName="${FullPath#$VaultMount/}"
-
             Output=$(vault write -format=json sys/sync/destinations/aws-sm/$Destination/associations/set mount=$VaultMount secret_name=$SecretName)
             jq .data.associated_secrets <<< $Output | grep -e "\"secret_name\": \"$SecretName\"" -A 1 | grep SYNCED > /dev/null
-
             if [[ $? -eq 0 ]]; then
                 echo -e " - ${GREEN}SUCCESS${NC}"
             else
