@@ -5,7 +5,12 @@
 
 Destination="demo-use2-templated" # the name of the destination configured in Vault
 VaultMount="kv"
-VaultParentPath=""
+VaultParentPath="demo/"
+
+# color codes
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
 
 iterate() {
     local Path=$1
@@ -18,9 +23,17 @@ iterate() {
     echo $Resp | jq -r '.[]' | while read -r Item; do
         FullPath=$Path$Item
         if [[ $Item != */ ]]; then
-            echo "Syncing secret: $FullPath"
+            echo -n "Syncing secret: $FullPath"
             SecretName="${FullPath#$VaultMount/}"
-            vault write sys/sync/destinations/aws-sm/$Destination/associations/set mount=$VaultMount secret_name=$SecretName
+
+            Output=$(vault write -format=json sys/sync/destinations/aws-sm/$Destination/associations/set mount=$VaultMount secret_name=$SecretName)
+            jq .data.associated_secrets <<< $Output | grep -e "\"secret_name\": \"$SecretName\"" -A 1 | grep SYNCED > /dev/null
+
+            if [[ $? -eq 0 ]]; then
+                echo -e " - ${GREEN}SUCCESS${NC}"
+            else
+                echo -e " - ${RED}FAILED${NC}"
+            fi
         else
             iterate $FullPath
         fi
