@@ -51,7 +51,6 @@ export ...
 
 ### Setup Destination (Account + Region)
 ```shell
-export AWS_ACCOUNT_ID=""
 # default template
 vault write sys/sync/destinations/aws-sm/demo-use2 \
   role_arn="arn:aws:iam::$AWS_ACCOUNT_ID:role/demo-vault-secrets-sync" \
