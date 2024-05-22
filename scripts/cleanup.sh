@@ -2,46 +2,50 @@
 
 # This script for demo purposes.
 # Use caution when dealing with production secrets.
-# This script FORCE DELETES.
 
-AWSRegion="us-east-2"
-SecretPrefix="vault/"
+
+Destination="demo-use2-templated" # the name of the destination configured in Vault
+VaultMount="kv"
+VaultParentPath="demo/"
 
 # color codes
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-# Confirm deletion
-read -p "CONFIRM: This script will force delete AWS Secrets with prefix: $SecretPrefix (y/N): " confirmation
-if [[ $confirmation != "y" && $confirmation != "Y" ]]; then
-  exit 0
-fi
+iterate() {
+    local Path=$1
+    Resp=$(vault kv list -format=json $Path 2>/dev/null)
 
-NextToken=""
-while : ; do
-    if [[ -z $NextToken ]]; then
-        Resp=$(aws secretsmanager list-secrets --region $AWSRegion --output json)
-    else
-        Resp=$(aws secretsmanager list-secrets --region $AWSRegion --output json --starting-token $NextToken)
+    if [[ $? -ne 0 ]]; then
+        return
     fi
 
-    Paths=$(echo $Resp | jq -r '.SecretList[] | .Name')
-    NextToken=$(echo $Resp | jq -r '.NextToken')
-
-    for Path in $Paths; do
-        if [[ $Path == "$SecretPrefix"* ]]; then
-            echo -n "Removing secret: $Path"
-            aws secretsmanager delete-secret --region $AWSRegion --force-delete-without-recovery --secret-id $Path > /dev/null 2>&1
+    echo $Resp | jq -r '.[]' | while read -r Item; do
+        FullPath=$Path$Item
+        if [[ $Item != */ ]]; then
+            echo -n "Removing secret: $FullPath"
+            SecretName="${FullPath#$VaultMount/}"
+            vault write -format=json sys/sync/destinations/aws-sm/$Destination/associations/remove mount=$VaultMount secret_name=$SecretName > /dev/null 2>&1
             if [[ $? -eq 0 ]]; then
                 echo -e " - ${GREEN}SUCCESS${NC}"
             else
                 echo -e " - ${RED}FAILED${NC}"
             fi
+        else
+            iterate $FullPath
         fi
     done
+}
 
-    if [[ $NextToken == "null" ]]; then
-        break
-    fi
-done
+# Start the DFS from the Parent Path
+iterate "$VaultMount/$VaultParentPath"
+
+# remove demo secret that was added manually
+echo -n "Removing secret: kv/path/to/secret"
+vault write -format=json sys/sync/destinations/aws-sm/demo-use2/associations/remove mount=kv secret_name="path/to/secret" > /dev/null 2>&1
+if [[ $? -eq 0 ]]; then
+    echo -e " - ${GREEN}SUCCESS${NC}"
+else
+    echo -e " - ${RED}FAILED${NC}"
+fi
