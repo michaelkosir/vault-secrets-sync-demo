@@ -93,6 +93,6 @@ View the secrets and secrets sync settings within the Vault UI.
 
 ### Cleanup
 ```shell
-terraform -chdir=tf destroy
 ./scripts/cleanup.sh
+terraform -chdir=tf destroy
 ```
