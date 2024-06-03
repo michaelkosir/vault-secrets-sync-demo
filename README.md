@@ -16,8 +16,8 @@ terraform -chdir=tf apply
 ```
 
 ### Vault Setup
-Using AWS Session Manager, connect to the EC2 Instance
 ```shell
+aws ssm start-session --target $(terraform output -raw demo_vault_id)
 # add license and start vault
 sudo nano /etc/vault.d/vault.hclic
 sudo systemctl start vault
