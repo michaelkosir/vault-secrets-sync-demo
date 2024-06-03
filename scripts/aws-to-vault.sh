@@ -24,8 +24,7 @@ while : ; do
 
     for Path in $Paths; do
         echo -n "Adding secret: $Path"
-        Resp=$(aws secretsmanager get-secret-value --region $AWSRegion --query 'SecretString' --output json --secret-id $Path | jq -r)
-        vault kv put $VaultMount/$Path $(jq -r 'to_entries | map("\(.key)=\(.value)") | join(" ")' <<< $Resp) > /dev/null 2>&1
+        aws secretsmanager get-secret-value --region $AWSRegion --secret-id $Path --query 'SecretString' | jq -r | vault kv put kv/test -  > /dev/null 2>&1
         if [[ $? -eq 0 ]]; then
             echo -e " - ${GREEN}SUCCESS${NC}"
         else
