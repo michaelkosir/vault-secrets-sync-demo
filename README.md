@@ -11,6 +11,7 @@ Secrets Sync allows you to automatically sync secrets from Vault Enterprise to a
 ### Infrastructure Setup
 ```shell
 cd vault-secrets-sync-demo/tf
+# add `vault_license` to .auto.tfvars
 terraform apply
 export VAULT_ADDR=$(terraform output -raw vault_addr)
 cd ..
