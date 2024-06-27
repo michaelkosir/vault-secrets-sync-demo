@@ -1,4 +1,5 @@
-*.env
+**/*.env
+**/init.json
 
 # Local .terraform directories
 **/.terraform/*

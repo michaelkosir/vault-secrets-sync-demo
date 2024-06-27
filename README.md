@@ -10,25 +10,21 @@ Secrets Sync allows you to automatically sync secrets from Vault Enterprise to a
 
 ### Infrastructure Setup
 ```shell
-git clone ...
-cd ./vault-secrets-sync-demo/
-terraform -chdir=tf apply
+cd vault-secrets-sync-demo/tf
+terraform apply
+export VAULT_ADDR=$(terraform output -raw vault_addr)
+cd ..
+```
+
+### Vault Init
+```shell
+vault operator init -key-shares=1 -key-threshold=1 -format=json > init.json
+vault operator unseal $(cat init.json | jq -r .unseal_keys_hex[0])
+export VAULT_TOKEN=$(cat init.json| jq -r .root_token)
 ```
 
 ### Vault Setup
 ```shell
-aws ssm start-session --target $(terraform output -raw demo_vault_id)
-# add license and start vault
-sudo nano /etc/vault.d/vault.hclic
-sudo systemctl start vault
-
-# init vault
-export VAULT_ADDR="http://localhost:8200"
-vault operator init -format=json -key-shares=1 -key-threshold=1 | sudo tee /home/ssm-user/init.json
-source /home/ssm-user/vault.env
-vault operator unseal $VAULT_UNSEAL
-
-# activation and mount setup
 vault write -f sys/activation-flags/secrets-sync/activate
 vault secrets enable -version=2 kv
 ```
@@ -42,10 +38,8 @@ vault kv put kv/path/to/secret \
 ```
 
 ### Add Secrets (Bulk)
-Perform this step from your local machine. This may require opening port `8200` on the AWS security group.
+Perform this step from your local machine.
 ```shell
-# set AWS and Vault EnvVars
-export ...
 ./scripts/aws-to-vault.sh
 ```
 
@@ -53,13 +47,13 @@ export ...
 ```shell
 # default template
 vault write sys/sync/destinations/aws-sm/demo-use2 \
-  role_arn="arn:aws:iam::$AWS_ACCOUNT_ID:role/demo-vault-secrets-sync" \
+  role_arn="arn:aws:iam::$AWS_ACCOUNT_ID:role/demo-secrets-sync" \
   region="us-east-2"
 
 # custom template (be cautious of overwrites)
 # https://developer.hashicorp.com/vault/docs/sync#name-template
 vault write sys/sync/destinations/aws-sm/demo-use2-templated \
-  role_arn="arn:aws:iam::$AWS_ACCOUNT_ID:role/demo-vault-secrets-sync" \
+  role_arn="arn:aws:iam::$AWS_ACCOUNT_ID:role/demo-secrets-sync" \
   region="us-east-2" \
   secret_name_template="vault/{{ if .NamespacePath }}{{ .NamespacePath }}/{{ else }}{{ end }}{{ .MountPath }}/{{ .SecretPath }}"
 ```
@@ -72,10 +66,8 @@ vault write sys/sync/destinations/aws-sm/demo-use2/associations/set \
 ```
 
 ### Sync Secrets (Bulk)
-Perform this step from your local machine. This may require opening port `8200` on the AWS security group.
+Perform this step from your local machine.
 ```shell
-# set Vault EnvVars
-export ...
 ./scripts/vault-to-aws.sh
 ```
 
@@ -94,5 +86,6 @@ View the secrets and secrets sync settings within the Vault UI.
 ### Cleanup
 ```shell
 ./scripts/cleanup.sh
-terraform -chdir=tf destroy
+cd tf/
+terraform destroy
 ```
